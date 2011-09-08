@@ -1,0 +1,16 @@
+------------------------------------
+--- ISSUE CLASSIFICATION REQUEST ---
+------------------------------------
+
+<classification-request> ::= CLASSIFY <path-to-file> TYPE <type-of-file> \n <serialized InfernoConf>
+<path-to-file>			 ::= <full path to file>/<file-name> | <path to file relative to SEAD's start directory>
+<type-of-file>			 ::= BMP | GIF | JPG | PNG | ICO | TIFF | PBM | PGM | PPM | XBM | XPM
+<serialized InfernoConf> ::= contents of InfernoConf in string format, as returned by InfernoConf::toString()
+
+-----------------------
+--- SERVER RESPONSE ---
+-----------------------
+
+The server sends a single integer back: -1 for error, 0 for success in
+queueing the request. It then stores all further response data directly
+in the shared database.

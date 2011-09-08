@@ -1,0 +1,75 @@
+#! /bin/sh
+#
+# sead		Startup script for the SEAD image classification server.
+#
+### BEGIN INIT INFO
+# Provides:          sead
+# Required-Start:    $network $remote_fs $syslog
+# Required-Stop:     $network $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Sead image classification server
+### END INIT INFO
+
+NAME=sead
+DESC="Sead image classification server"
+DAEMON=/usr/local/bin/sead
+PIDFILE=/var/run/$NAME.pid
+
+. /lib/lsb/init-functions
+
+PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
+
+[ -x $DAEMON ] || exit 0
+
+ulimit -n 65535
+
+start () {
+	umask 027
+	ulimit -n 65535
+	start-stop-daemon --quiet --start \
+		--pidfile $PIDFILE \
+		--exec $DAEMON < /dev/null
+	return $?
+}
+
+stop () {
+	PID=`cat $PIDFILE 2>/dev/null`
+	start-stop-daemon --stop --quiet --pidfile $PIDFILE --exec $DAEMON
+	return 0
+}
+
+case "$1" in
+    start)
+	log_daemon_msg "Starting $DESC" "$NAME"
+	if start ; then
+		log_end_msg $?
+	else
+		log_end_msg $?
+	fi
+	;;
+    stop)
+	log_daemon_msg "Stopping $DESC" "$NAME"
+	if stop ; then
+		log_end_msg $?
+	else
+		log_end_msg $?
+	fi
+	;;
+    restart)
+	log_daemon_msg "Restarting $DESC" "$NAME"
+	stop
+	if start ; then
+		log_end_msg $?
+	else
+		log_end_msg $?
+	fi
+	;;
+    *)
+	echo "Usage: /etc/init.d/$NAME {start|stop|restart}"
+	exit 3
+	;;
+esac
+
+exit 0
+

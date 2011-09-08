@@ -1,0 +1,130 @@
+InFeRno is an open-source implementation of the system described in [1]
+and demonstrated at ECML/PKDD 2011 [2], available under the terms of GNU
+LGPL (v3 or later).
+
+InFeRno currently consists of two components:
+a. A C-ICAP module -- srv_inferno -- responsible for prefetching web
+   data to a local data store and for maintaining state in a MySQL
+   database.
+b. An image classification service -- Sead -- operating on files in the
+   above data store, classifying them in one of three categories;
+   namely, "benign", "bikini", and "porn".
+
+By design, the system makes heavy use of threads:
+* C-ICAP is using a process-pool model, where each of the worker
+  processes maintains a separate thread pool. Each process instantiates
+  a single InFeRno object and then threads from the pool are assigned to
+  incoming requests, calling on InFeRno routines to do the task at hand.
+* Each InFeRno thread is also using a thread pool of its own (whose size
+  can be tweaked via srv_inferno.conf) to parallelize the transfers of
+  requested web objects.
+* Last, Sead is also using a thread pool for the classification
+  requests. As image classification is highly CPU bound, the size of
+  this pool is computed automatically, based on the number of processing
+  cores in the host system.
+
+All state is stored in a MySQL database table. Although all of the above
+threads read/update rows of the same table, our design allows these
+operations to be performed safely without any table/row locks, thus
+resulting in a very low overhead concerning database I/O operations.
+
+To avoid expensive data conversion/escaping operations, fetched web
+objects are stored as files in a Squid-like directory structure, using
+the MD5 of the object's URL as the filename. Please, see the section on
+run-time dependencies for more on this.
+
+Sead and InFeRno log all messages to syslog (facility: "local1", name:
+"InFeRno"), unless built with the --enable-debug configure parameter in
+which case all output is redirected to stderr. Several other aspects of
+the system can be tweaked through srv_inferno.conf. Please refer to the
+comments in said file for more information.
+
+InFeRno is work-in-progress, in the sense that it is constantly updated
+and tweaked, and is provided as-is.
+
+For any bug reports, feature requests, or other comments, please contact
+the authors.
+
+[1] http://www.cs.uoi.gr/tech_reports/publications/TR-2011-09.pdf
+[2] http://www.ecmlpkdd2011.org/acceptedDemos.php
+
+
++----------------------------------------------------------------------+
++ InFeRno build-time dependencies                                      +
++----------------------------------------------------------------------+
+
+In order to build InFeRno, you will need the following packages (Ubuntu
+package names in parentheses):
+- GNU C++ compiler          (g++)
+- GNU Automake              (automake)
+- GNU Autoconf              (autoconf)
+- GNU Libtool               (libtool)
+- GNU make                  (make)
+- XML/HTML parser library   (libxml2-dev)
+- MySQL client library      (libmysqlclient-dev)
+- URI parser library        (liburiparser-dev)
+- C-ICAP API library        (libicapapi-dev)
+- OpenSSL library           (libssl-dev)
+- CURL library              (libcurl3)
+- LibSVM 3.1+               (libsvm-dev)
+- OpenCV 2.1.0+             (libcv-dev)
+
+NOTE: We recommend that you compile and install your own build of the
+latest Open Computer Vision framework (http://opencv.sourceforge.net/).
+Some Linux distributions provide development packages of older versions
+of this library (e.g., Ubuntu bundles OpenCV 2.1.0). Although we have
+tested and verified our system with some of them, we recommend that you
+go with the 2.3.0 bundle.
+
++----------------------------------------------------------------------+
++ InFeRno run-time dependencies                                        +
++----------------------------------------------------------------------+
+
+To run InFeRno, you will also need:
+
+1. MySQL:
+
+   It is mandatory that you have a server running MySQL with InFeRno's
+   database schema (see doc/schema.sql), accessible by the C-ICAP module
+   and Sead. The credentials can be configured through srv_inferno.conf.
+
+2. Spool directory:
+
+   As already mentioned, InFeRno spools and caches downloaded data in a
+   Squid-like directory hierarchy. You will need to define a directory
+   in srv_inferno.conf, making sure C-ICAP and Sead have full (rwx)
+   access on it.
+
+   For better performance it is advised that the spool directory resides
+   on a memory/swap-backed storage device (aka. ramdisk). An easy way of
+   accomplishing this in Linux is by using the tmpfs file system (see
+   mount(8) for more information).
+
+   When operating in this mode, you will have to make sure that either
+   the cache database is emptied if the tmpfs volume is unmounted, or
+   take extra steps to store cached data on a disk-backed volume and
+   restore them in the tmpfs volume when it is remounted.
+
+3. C-ICAP:
+
+   InFeRno is implemented as a C-ICAP module, so a C-ICAP server is also
+   mandatory. See the bundled srv_inferno.conf configuration file for
+   ways of enabling InFeRno within C-ICAP and for relevant configuration
+   parameters.
+
+4. ICAP-enabled web proxy server:
+
+   Last, unless you have an ICAP-capable web client, you will also need
+   a web proxy cache to act as an intermediate between web clients and
+   C-ICAP. Squid3 (squid3 v3.1.11) was used during the development of
+   InFeRno, but any other ICAP-enabled web proxy server should be fine.
+   InFeRno is built to work on the request/pre-cache path (that is, in
+   the reqmod_precache vectoring point) and does not support PREVIEW
+   requests. For more information on configuring Squid for use with an
+   ICAP service, please refer to the documentation of Squid.
+
+--
+
+Copyright (C) 2011:
+* Nikos Ntarmos <ntarmos@cs.uoi.gr>
+* Sotirios Karavarsamis <s.karavarsamis@gmail.com>
