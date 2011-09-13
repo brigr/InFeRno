@@ -80,6 +80,8 @@ static string basedir;
 // inter-thread conditional variable
 sem_t mutex;
 sem_t fillCount;
+sem_t gotSignal;
+int sigCount = 0;
 
 queue<WorkerJob *> reqs; // shared job queue
 pthread_t tid; // producer thread identifier
@@ -89,75 +91,10 @@ ServerEndpoint* srv; // server endpoint
 using namespace std;
 
 void sig_int(int sig) {
-	int ret;
-
 	(void)sig;
-
+	sigCount++;
+	sem_post(&gotSignal);
 	Logger::debug("Received signal. Going to kill daemon!");
-
-	// kill worker threads
-	Logger::debug("Stopping worker threads");
-
-	for(unsigned i = 0; i < POOLSIZE; i++) {
-		ret = pthread_kill(workers[i], SIG_BLOCK);
-		if(ret != 0) {
-			Logger::debug("pthread_kill() failed");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	// kill producer detached thread
-	Logger::debug("Killing producer thread");
-	ret = pthread_kill(tid, SIG_BLOCK);
-	if(ret != 0) {
-		Logger::debug("Shooting attempt against producer thread failed!");
-		exit(EXIT_FAILURE);
-	}
-
-	Logger::debug("All threads are killed!");
-
-	// close server endpoint
-	Logger::debug("Closing server endpoint...");
-	delete srv;
-
-	Logger::debug("Destroying shared queue resource");
-	bool cacheCleaned = false;
-	while (!reqs.empty()) {
-		DbCache cache;
-		WorkerJob* front = reqs.front();
-		reqs.pop();
-		// XXX: Assuming that state for all requests is stored in the same database
-		if (!cacheCleaned && !cache.init(*front->iConf)) {
-			cache.fixCache();
-			cacheCleaned = true;
-		}
-		delete front;
-	}
-
-	sem_destroy(&mutex);
-	sem_destroy(&fillCount);
-
-	if (porn_model)
-#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
-		svm_free_and_destroy_model(&porn_model);
-#else
-		svm_destroy_model(porn_model);
-#endif
-
-	if (bikini_model)
-#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
-		svm_free_and_destroy_model(&bikini_model);
-#else
-		svm_destroy_model(bikini_model);
-#endif
-
-	if (benign_model)
-#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
-		svm_free_and_destroy_model(&benign_model);
-#else
-		svm_destroy_model(benign_model);
-#endif
-	exit(EXIT_SUCCESS);
 }
 
 // parse user request and try to infer a known request type and extract
@@ -518,7 +455,7 @@ void *worker_main(void *arg) {
 }
 
 int main(int argc, char **argv) {
-	int ret, c;
+	int ret, c, retval = EXIT_FAILURE;
 	char *port = (char*)"1345",  *ip_addr = (char*)""; // default (LISTEN on all ifaces)
 
 	// check user-provided options
@@ -539,6 +476,11 @@ int main(int argc, char **argv) {
 	int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
 	POOLSIZE = (numCPU > 0) ? (int)ceil(1.5 * (double)numCPU) : 1;
 	Logger::info("Using %u threads for classification", POOLSIZE);
+
+	if (sem_init(&gotSignal, 0, 0)) {
+		perror("sem_init");
+		goto cleanup;
+	}
 
 	if (sem_init(&mutex, 0, 1)) {
 		perror("sem_init");
@@ -637,17 +579,66 @@ int main(int argc, char **argv) {
 
 	// wait for incoming connections
 	Logger::debug("Entering main server loop...");
-	for(;;)
-		pause();
+	if (!sigCount)
+		sem_wait(&gotSignal);
+	// kill worker threads
+	Logger::debug("Stopping worker threads");
+	for (unsigned i = 0; i < POOLSIZE; i++)
+		pthread_cancel(workers[i]);
+
+	// kill worker threads
+	Logger::debug("Stopping producer thread");
+	pthread_cancel(tid);
 
 	// return peacefully
-	return EXIT_SUCCESS;
+	retval = EXIT_SUCCESS;
 
 cleanup:
-	sem_destroy(&fillCount);
-	sem_destroy(&mutex);
-	if (srv)
+	if (srv) {
+		Logger::debug("Closing server endpoint...");
 		delete srv;
+	}
 	if (workers)
 		delete[] workers;
+
+	Logger::debug("Destroying shared queue resource");
+	bool cacheCleaned = false;
+	while (!reqs.empty()) {
+		DbCache cache;
+		WorkerJob* front = reqs.front();
+		reqs.pop();
+		// XXX: Assuming that state for all requests is stored in the same database
+		if (!cacheCleaned && !cache.init(*front->iConf)) {
+			cache.fixCache();
+			cacheCleaned = true;
+		}
+		delete front;
+	}
+
+	sem_destroy(&mutex);
+	sem_destroy(&fillCount);
+	sem_destroy(&gotSignal);
+
+	if (porn_model)
+#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
+		svm_free_and_destroy_model(&porn_model);
+#else
+		svm_destroy_model(porn_model);
+#endif
+
+	if (bikini_model)
+#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
+		svm_free_and_destroy_model(&bikini_model);
+#else
+		svm_destroy_model(bikini_model);
+#endif
+
+	if (benign_model)
+#if defined(LIBSVM_VERSION) && (LIBSVM_VERSION >= 310)
+		svm_free_and_destroy_model(&benign_model);
+#else
+		svm_destroy_model(benign_model);
+#endif
+
+	return retval;
 }
