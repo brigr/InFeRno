@@ -36,6 +36,9 @@ bool Logger::logOpened = false;
 
 void Logger::log(int priority, const string& format, va_list ap) {
 	string fmt = format;
+	va_list ap2;
+
+	va_copy(ap2, ap);
 
 	if (!logOpened) {
 		openlog(Logger::IDENT, LOG_CONS | LOG_PERROR | LOG_PID, LOG_LOCAL1);
@@ -60,11 +63,12 @@ void Logger::log(int priority, const string& format, va_list ap) {
 	}
 	fmt = "[" + loglevel + "] " + fmt + "\n";
 #ifdef DEBUG
-	vfprintf(stderr, fmt.c_str(), ap);
+	vfprintf(stderr, fmt.c_str(), ap2);
 #else
 	if (priority == LOG_CRIT || priority == LOG_ERR)
-		vsyslog(priority, fmt.c_str(), ap);
+		vsyslog(priority, fmt.c_str(), ap2);
 #endif
+	va_end(ap2);
 }
 
 void Logger::info(const string& format, ...) {
