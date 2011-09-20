@@ -1,7 +1,11 @@
 AM_CPPFLAGS = -I${top_srcdir}/include -I${top_srcdir} @AM_CPPFLAGS@
 
 bin_PROGRAMS = sead
-noinst_PROGRAMS = fetchAll seadclient imclassifier
+noinst_PROGRAMS = fetchAll seadclient imclassifier sac-parser
+
+sac_parser_SOURCES = sac-parser.cpp
+sac_parser_CPPFLAGS = @CROCO_CFLAGS@ @URIP_CFLAGS@ @GLIB_CFLAGS@ ${AM_CPPFLAGS}
+sac_parser_LDFLAGS = @CROCO_LDFLAGS@ @URIP_LDFLAGS@ @GLIB_LDFLAGS@ @AM_LDFLAGS@
 
 sead_SOURCES = sead.cpp
 sead_LDADD = ../libinferno/libinferno.la ../libsead/libsead.la ../libmynet/libmynet.la

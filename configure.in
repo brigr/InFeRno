@@ -155,6 +155,27 @@ OSSL_LDFLAGS="$ssllibs"
 AC_SUBST([OSSL_CFLAGS])
 AC_SUBST([OSSL_LDFLAGS])
 
+# check for libcroco-0.6
+AC_MSG_CHECKING([for libcroco-0.6 development files])
+
+if pkg-config --exists libcroco-0.6 >& /dev/null; then
+	crocoflags=`croco-0.6-config --cflags`
+	crocolibs=`croco-0.6-config --libs`
+	FOUND_CROCO=1
+fi
+
+if test -z "$FOUND_CROCO"; then
+	AC_MSG_RESULT(no)
+	AC_MSG_ERROR([libcroco-0.6 development files were not found!])
+fi
+AC_MSG_RESULT(yes)
+
+CROCO_CFLAGS="$crocoflags"
+CROCO_LDFLAGS="$crocolibs"
+
+AC_SUBST([CROCO_CFLAGS])
+AC_SUBST([CROCO_LDFLAGS])
+
 #check for OpenCV
 AC_MSG_CHECKING([for OpenCV development libraries])
 if pkg-config --exists opencv >& /dev/null; then
