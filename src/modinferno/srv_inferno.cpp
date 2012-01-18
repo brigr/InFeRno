@@ -314,7 +314,7 @@ int inferno_check_preview(char *preview_data, int preview_data_len, ci_request_t
 	Logger::info("fetching and classifying web object");
 	cval = multifetch.extractlinks(cur_uri, cur_uri_hash, ctype);
 	if (cval == InfernoConf::CLASS_ERROR) {
-		gotError = false;
+		gotError = true;
 		goto allow_request;
 	}
 
