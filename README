@@ -66,8 +66,11 @@ package names in parentheses):
 - C-ICAP API library        (libicapapi-dev)
 - OpenSSL library           (libssl-dev)
 - CURL library              (libcurl3)
+- Croco library             (libcroco3-dev)
 - LibSVM 3.1+               (libsvm-dev)
 - OpenCV 2.1.0+             (libcv-dev)
+- OpenCV Contrib            (libopencv-contrib-dev)
+- HighGUI library           (libhighgui-dev)
 
 NOTE: We recommend that you compile and install your own build of the
 latest Open Computer Vision framework (http://opencv.sourceforge.net/).

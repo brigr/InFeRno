@@ -159,8 +159,8 @@ AC_SUBST([OSSL_LDFLAGS])
 AC_MSG_CHECKING([for libcroco-0.6 development files])
 
 if pkg-config --exists libcroco-0.6 >& /dev/null; then
-	crocoflags=`croco-0.6-config --cflags`
-	crocolibs=`croco-0.6-config --libs`
+	crocoflags=`pkg-config --cflags libcroco-0.6`
+	crocolibs=`pkg-config --libs libcroco-0.6`
 	FOUND_CROCO=1
 fi
 

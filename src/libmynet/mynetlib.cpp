@@ -52,7 +52,7 @@ ServerEndpoint::ServerEndpoint(const string& hostname, const string& servname, i
 }
 
 int ServerEndpoint::init() {
-	int tmp, err, index;
+	int tmp, index;
 	struct addrinfo hints, *cur = NULL;
 
 	if (servname.empty()) {
@@ -79,7 +79,7 @@ int ServerEndpoint::init() {
 	}
 	sdlen = index;
 
-	for (tmp = 0, err = 0, index = 0, cur = addr; cur; cur = cur->ai_next, index++, err = 0) {
+	for (tmp = 0, index = 0, cur = addr; cur; cur = cur->ai_next, index++ ) {
 		int on = 1;
 		if ((sd[index] = socket(cur->ai_family, cur->ai_socktype, cur->ai_protocol)) < 0) {
 			Logger::debug("socket");
@@ -111,7 +111,7 @@ int ServerEndpoint::init() {
 }
 
 int ClientEndpoint::init() {
-	int tmp, err;
+	int tmp;
 	struct addrinfo hints, *cur = NULL;
 
 	if (hostname.empty() || servname.empty()) {
@@ -137,7 +137,7 @@ int ClientEndpoint::init() {
 	}
 	sdlen = 1;
 
-	for (tmp = 0, err = 0, cur = addr; !tmp && cur; cur = cur->ai_next, err = 0) {
+	for (tmp = 0, cur = addr; !tmp && cur; cur = cur->ai_next ) {
 		if ((sd[0] = socket(cur->ai_family, cur->ai_socktype, cur->ai_protocol)) < 0) {
 			Logger::debug("socket");
 			continue;
@@ -159,17 +159,15 @@ int ClientEndpoint::init() {
 }
 
 BaseEndpoint::~BaseEndpoint() {
-	int index, err = 0;
+	int index;
 
-	for (err = 0, index = 0; index < sdlen; index++) {
+	for (index = 0; index < sdlen; index++) {
 		if (sd[index] >= 0) {
 			if ((shutdown(sd[index], SHUT_RDWR) && errno != EOPNOTSUPP)) {
 				Logger::error("shutdown");
-				err = 1;
 			}
 			if (close(sd[index])) {
 				Logger::error("close");
-				err = 1;
 			}
 		}
 	}
