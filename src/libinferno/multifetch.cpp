@@ -406,7 +406,7 @@ cleanup_curl_handle:
 	while (waitfor.size()) {
 		for (set<string>::iterator it = waitfor.begin(); it != waitfor.end(); ) {
 			InfernoConf::Status status = cache->lookupUrlStatus(*it);
-			InfernoConf::Classification cres;
+			InfernoConf::Classification cres = InfernoConf::CLASS_UNDEFINED;
 			switch (status) {
 				case InfernoConf::STATUS_DONE:
 					cres = cache->lookupUrlClassification(*it);
@@ -561,7 +561,7 @@ InfernoConf::Classification Multifetch::extractlinks(const string& url_pt, strin
 				Logger::debug("Classifying image...");
 
 				// given that we have the image classified, update cache with the score
-				InfernoConf::Classification cres;
+				InfernoConf::Classification cres = InfernoConf::CLASS_UNDEFINED;
 				if (consult_nimage_classifier(url_pt_hash, InfernoConf::img_ext[i])) {
 					Logger::debug("Updating image status to 'FAILURE'");
 					if(!cache->updateUrlStatus(url_pt_hash, InfernoConf::STATUS_FAILURE)) {

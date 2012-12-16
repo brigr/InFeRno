@@ -59,7 +59,6 @@ Sead::~Sead() { if (img) { cvReleaseImage(&img); img = NULL; } }
 
 IplImage* Sead::loadGIF(const string& file) {
 	GdkPixbuf *pb;
-	GdkColorspace csp;
 	GError *gerror = NULL;
 
 	IplImage *image;
@@ -68,7 +67,6 @@ IplImage* Sead::loadGIF(const string& file) {
 	int height;
 	int rowstride;
 	int chans;
-	int bps;
 
 	int x;
 	int y;
@@ -94,9 +92,7 @@ IplImage* Sead::loadGIF(const string& file) {
 	height		= gdk_pixbuf_get_height(pb);
 	rowstride	= gdk_pixbuf_get_rowstride(pb);
 	chans		= gdk_pixbuf_get_n_channels(pb);
-	bps			= gdk_pixbuf_get_bits_per_sample(pb);
 
-	csp			= gdk_pixbuf_get_colorspace(pb);
 	pixels		= gdk_pixbuf_get_pixels(pb);
 
 
@@ -104,7 +100,7 @@ IplImage* Sead::loadGIF(const string& file) {
 	image = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, chans);
 	if(image == NULL) {
 		Logger::debug("cvCreateImage");
-		gdk_pixbuf_unref(pb);
+		g_object_unref(pb);
 		return NULL;
 	}
 
@@ -119,7 +115,7 @@ IplImage* Sead::loadGIF(const string& file) {
 	}
 
 	// free memory associated with image
-	gdk_pixbuf_unref(pb);
+	g_object_unref(pb);
 
 	// return structure
 	return(image);
